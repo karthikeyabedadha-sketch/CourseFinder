@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Import courses — Admin{% endblock %}
+{% block content %}
+<div class="container admin-shell">
+  {% include "admin/_nav.html" %}
+  <div class="form-card">
+    <h1>Import courses from CSV</h1>
+    <p class="notice">Every imported row becomes a <strong>draft</strong>. Imports can never publish, approve or feature anything. You will see a preview with row-level errors before anything is saved.</p>
+    <p>Required columns: <code>title</code>, <code>official_url</code>. Optional: {{ columns[2:]|join(", ") }}.</p>
+    <p class="field-hint">Only enter prices, links and details you have checked yourself. Leave a cell empty if you do not know it.</p>
+    <form method="post" enctype="multipart/form-data">
+      {{ form.hidden_tag() }}
+      <div class="field">{{ form.file.label }} {{ form.file }}{% for e in form.file.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+      <button class="btn" type="submit">Upload and preview</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

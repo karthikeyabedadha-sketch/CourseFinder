@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Course Manager — Owner Studio{% endblock %}
+{% block content %}
+<div class="container admin-shell">
+  {% include "admin/_nav.html" %}
+  <div>
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">Owner Studio</p>
+        <h1>Course Manager</h1>
+        <p class="muted">{{ result.total }} course(s) matching current filters. Every new course defaults to draft until you approve and publish it.</p>
+      </div>
+      <div class="flex-wrap-gap">
+        <a class="btn btn-small" href="{{ url_for('admin.course_new') }}">+ Add course (draft)</a>
+        <a class="btn btn-small btn-secondary" href="{{ url_for('admin.ai_assistant') }}">✦ AI Content Assistant</a>
+      </div>
+    </div>
+
+    <div class="quick-links mb-12" aria-label="Quick status and pricing tabs">
+      <a href="{{ url_for('admin.courses') }}">All</a>
+      <a href="{{ url_for('admin.courses', status='draft') }}">Drafts</a>
+      <a href="{{ url_for('admin.courses', status='pending_review') }}">Pending review</a>
+      <a href="{{ url_for('admin.courses', status='approved') }}">Approved</a>
+      <a href="{{ url_for('admin.courses', status='published') }}">Published</a>
+      <a href="{{ url_for('admin.courses', status='archived') }}">Archived</a>
+      <a href="{{ url_for('admin.courses', pricing='free') }}">Free</a>
+      <a href="{{ url_for('admin.courses', pricing='paid') }}">Paid</a>
+      <a href="{{ url_for('admin.courses', flag='featured') }}">Featured</a>
+      <a href="{{ url_for('admin.courses', flag='underrated') }}">Underrated</a>
+    </div>
+
+    <form method="get" class="filters panel">
+      <div class="filter-search">
+        <input name="q" value="{{ q }}" placeholder="Search title, provider, skill, or keyword" aria-label="Search">
+      </div>
+      <div>
+        <select name="status" aria-label="Status">
+          <option value="">All statuses</option>
+          {% for item in statuses %}
+            <option value="{{ item }}" {% if status == item %}selected{% endif %}>{{ labels[item] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <select name="category" aria-label="Category">
+          <option value="">All categories</option>
+          {% for c in categories %}<option value="{{ c.slug }}" {% if category == c.slug %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <select name="pricing" aria-label="Pricing">
+          <option value="">Any pricing</option>
+          <option value="free" {% if pricing == "free" %}selected{% endif %}>Free</option>
+          <option value="paid" {% if pricing == "paid" %}selected{% endif %}>Paid</option>
+          <option value="unknown" {% if pricing == "unknown" %}selected{% endif %}>Unknown pricing</option>
+        </select>
+      </div>
+      <div>
+        <select name="difficulty" aria-label="Difficulty">
+          <option value="">Any difficulty</option>
+          <option value="beginner" {% if difficulty == "beginner" %}selected{% endif %}>Beginner</option>
+          <option value="intermediate" {% if difficulty == "intermediate" %}selected{% endif %}>Intermediate</option>
+          <option value="advanced" {% if difficulty == "advanced" %}selected{% endif %}>Advanced</option>
+        </select>
+      </div>
+      <div>
+        <select name="flag" aria-label="Editorial flag">
+          <option value="">Any flag</option>
+          <option value="featured" {% if flag == "featured" %}selected{% endif %}>Featured</option>
+          <option value="underrated" {% if flag == "underrated" %}selected{% endif %}>Underrated</option>
+          <option value="needs_verification" {% if flag == "needs_verification" %}selected{% endif %}>Needs check</option>
+        </select>
+      </div>
+      <div>
+        <select name="sort" aria-label="Organise / Sort">
+          <option value="updated" {% if sort == "updated" %}selected{% endif %}>Sort: Recently updated</option>
+          <option value="newest" {% if sort == "newest" %}selected{% endif %}>Sort: Newest published</option>
+          <option value="title" {% if sort == "title" %}selected{% endif %}>Sort: Title (A–Z)</option>
+          <option value="editorial" {% if sort == "editorial" %}selected{% endif %}>Sort: Editorial score</option>
+          <option value="price_low" {% if sort == "price_low" %}selected{% endif %}>Sort: Price (low to high)</option>
+          <option value="price_high" {% if sort == "price_high" %}selected{% endif %}>Sort: Price (high to low)</option>
+        </select>
+      </div>
+      <div class="filters-actions">
+        <button class="btn btn-small" type="submit">Apply</button>
+        <a class="btn btn-small btn-ghost" href="{{ url_for('admin.courses') }}">Reset</a>
+      </div>
+    </form>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Course &amp; Category</th>
+            <th>Pricing &amp; Level</th>
+            <th>Status &amp; Publishing Workflow</th>
+            <th>Editorial Badges</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for course in result["items"] %}
+            <tr>
+              <td>
+                <strong><a href="{{ url_for('admin.course_edit', course_id=course.id) }}">{{ course.title }}</a></strong>
+                <div class="field-hint">
+                  {{ course.provider_name or "Provider unverified" }} · {{ course.category_name or "Uncategorised" }}
+                  {% if course.recommendation_status and course.recommendation_status != 'none' %}
+                    · <span class="pill">{{ course.recommendation_status|replace("_", " ")|title }}</span>
+                  {% endif %}
+                </div>
+              </td>
+              <td>
+                {% if course.is_free == True %}
+                  <span class="pill pill-free">Free</span>
+                {% elif course.is_free == False %}
+                  <span class="pill pill-paid">Paid{% if course.price is not none %} ({{ course.currency or "USD" }} {{ "%.2f"|format(course.price) }}){% endif %}</span>
+                {% else %}
+                  <span class="pill">Price unknown</span>
+                {% endif %}
+                <div class="field-hint">{{ (course.difficulty|title) if course.difficulty else "Level unknown" }}{% if course.duration %} · {{ course.duration }}{% endif %}</div>
+              </td>
+              <td>
+                <div class="mb-12">{% with status=course.status %}{% include "partials/status_badge.html" %}{% endwith %}</div>
+                <div class="review-actions">
+                  {% for target, label in actions_for(course.status) %}
+                    {% if target in ('pending_review', 'approved', 'published') or (course.status == 'published' and target == 'draft') %}
+                      <form method="post" action="{{ url_for('admin.course_transition', course_id=course.id) }}" class="inline-form"
+                            {% if target == 'published' or course.status == 'published' %}data-confirm="{{ label }}: are you sure?"{% endif %}>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="target" value="{{ target }}">
+                        <button class="btn btn-small {% if target == 'published' %}btn{% elif target == 'approved' %}btn-secondary{% else %}btn-ghost{% endif %}" type="submit">{{ label }}</button>
+                      </form>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              </td>
+              <td>
+                <div class="review-actions">
+                  <form method="post" action="{{ url_for('admin.course_flag', course_id=course.id) }}" class="inline-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="flag" value="is_featured">
+                    <button class="btn btn-small {% if course.is_featured %}btn-secondary{% else %}btn-ghost{% endif %}" type="submit">
+                      {{ "★ Featured" if course.is_featured else "☆ Feature" }}
+                    </button>
+                  </form>
+                  <form method="post" action="{{ url_for('admin.course_flag', course_id=course.id) }}" class="inline-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="flag" value="is_underrated">
+                    <button class="btn btn-small {% if course.is_underrated %}btn-secondary{% else %}btn-ghost{% endif %}" type="submit">
+                      {{ "◆ Underrated" if course.is_underrated else "◇ Underrated" }}
+                    </button>
+                  </form>
+                </div>
+              </td>
+              <td>
+                <a href="{{ url_for('admin.course_edit', course_id=course.id) }}">Edit</a>
+                · <a href="{{ url_for('admin.course_preview', course_id=course.id) }}">Preview</a>
+                {% if course.status != 'published' %}
+                  · <a href="{{ url_for('admin.course_delete', course_id=course.id) }}">Delete</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5">No matching course records.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "partials/pager.html" %}
+  </div>
+</div>
+{% endblock %}

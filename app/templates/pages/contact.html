@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Contact — CourseFinder{% endblock %}
+{% block content %}
+<section class="container section">
+  <div class="form-card">
+    <h1>Contact</h1>
+    <form method="post">
+      {{ form.hidden_tag() }}
+      <div class="field">{{ form.name.label }} {{ form.name }} {% for e in form.name.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+      <div class="field">{{ form.email.label }} {{ form.email }} {% for e in form.email.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+      <div class="field">{{ form.message.label }} {{ form.message(rows=6) }} {% for e in form.message.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+      <button class="btn" type="submit">Send</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

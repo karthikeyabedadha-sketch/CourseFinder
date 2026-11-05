@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}My library — CourseFinder{% endblock %}
+{% block content %}
+<section class="container section">
+  <div class="account-subnav" aria-label="Account navigation">
+    <a class="btn btn-small btn-secondary" href="{{ url_for('account.library') }}">My library</a>
+    <a class="btn btn-small btn-ghost" href="{{ url_for('account.profile') }}">Profile &amp; security</a>
+    <a class="btn btn-small btn-ghost" href="{{ url_for('account.submit_course') }}">Suggest a course</a>
+  </div>
+
+  <h1>My library</h1>
+  <p class="muted">Manage your bookmarked courses, course reviews, and editorial suggestions.</p>
+
+  <h2 class="mt-28">Saved courses</h2>
+  {% if saved %}
+    <div class="card-grid">
+      {% for course in saved %}
+        <div>
+          {% include "partials/course_card.html" %}
+          <form method="post" action="{{ url_for('account.unsave', course_id=course.id) }}" class="mt-12">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-small btn-ghost" type="submit">Remove from saved</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state panel">
+      <p>You have not saved any courses yet.</p>
+      <a class="btn btn-small" href="{{ url_for('public.courses') }}">Explore courses</a>
+    </div>
+  {% endif %}
+
+  <h2 class="mt-28">Your reviews</h2>
+  {% if reviews %}
+    <div>
+      {% for review in reviews %}
+        <article class="panel pad-16 mb-12">
+          <div class="review-header">
+            <div>
+              <strong><a href="{{ url_for('public.course_detail', slug=review.course_slug) }}">{{ review.course_title }}</a></strong>
+              · <span class="score-pill">★ {{ review.rating }}/5</span>
+              · <span class="status-badge status-{{ review.status }}">{{ review.status|title }}</span>
+            </div>
+            <div class="review-actions">
+              <a class="btn btn-small btn-ghost" href="{{ url_for('public.course_detail', slug=review.course_slug, edit_review=1) }}#write-review">Edit</a>
+              <form method="post" action="{{ url_for('public.delete_my_review', slug=review.course_slug) }}" class="inline-form" data-confirm="Delete your review?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-small btn-danger" type="submit">Delete</button>
+              </form>
+            </div>
+          </div>
+          <p class="pre-wrap mt-12">{{ review.body }}</p>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted">You have not submitted a review yet.</p>
+  {% endif %}
+
+  <h2 class="mt-28">Your course suggestions</h2>
+  {% if submissions %}
+    <div>
+      {% for sub in submissions %}
+        <article class="panel pad-16 mb-12">
+          <p>
+            <strong>{{ sub.title }}</strong>
+            {% if sub.provider_name %} · {{ sub.provider_name }}{% endif %}
+            · <span class="status-badge status-{{ sub.status }}">{{ sub.status|title }}</span>
+          </p>
+          <p class="field-hint">Submitted link: {{ sub.official_url }}</p>
+          {% if sub.note %}<p class="pre-wrap mt-12">{{ sub.note }}</p>{% endif %}
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted">You have not suggested any courses yet. <a href="{{ url_for('account.submit_course') }}">Suggest an underrated or valuable course</a>.</p>
+  {% endif %}
+</section>
+{% endblock %}

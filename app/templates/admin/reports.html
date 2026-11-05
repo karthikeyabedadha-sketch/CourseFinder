@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Reports — Admin{% endblock %}
+{% block content %}
+<div class="container admin-shell">
+  {% include "admin/_nav.html" %}
+  <div>
+    <h1>Reports</h1>
+    <p>
+      {% for s in ["pending", "resolved", "dismissed", "all"] %}
+        {% if s == status %}<strong>{{ s|title }}</strong>{% else %}<a href="{{ url_for('admin.reports', status=s) }}">{{ s|title }}</a>{% endif %}{% if not loop.last %} · {% endif %}
+      {% endfor %}
+    </p>
+    {% for r in reports %}
+      <article class="panel pad-16 mb-12">
+        <p><strong>{{ r.target_type|title }} report</strong> · {{ r.reason|replace("_", " ") }} · by {{ r.reporter_name or "unknown" }} · {{ r.status }}</p>
+        <p>About: {{ r.course_title or "(deleted)" }}
+          {% if r.course_id %}· <a href="{{ url_for('admin.course_edit', course_id=r.course_id) }}">open course</a>{% endif %}</p>
+        {% if r.review_body %}<p>Review text: “{{ r.review_body }}”</p>{% endif %}
+        {% if r.details %}<p>Details: {{ r.details }}</p>{% endif %}
+        {% if r.status == "pending" %}
+          <form method="post" action="{{ url_for('admin.report_resolve', report_id=r.id) }}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-small" name="status" value="resolved">Mark resolved</button>
+            <button class="btn btn-small btn-ghost" name="status" value="dismissed">Dismiss</button>
+          </form>
+        {% endif %}
+      </article>
+    {% else %}
+      <p class="muted">No reports in this list.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

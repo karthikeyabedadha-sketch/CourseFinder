@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Import preview — Admin{% endblock %}
+{% block content %}
+<div class="container admin-shell">
+  {% include "admin/_nav.html" %}
+  <div>
+    <h1>Import preview</h1>
+    <p>{{ batch.filename }} · <strong>{{ ok }}</strong> row(s) ready, <strong>{{ bad }}</strong> with errors (errors are skipped).</p>
+    <table class="table">
+      <thead><tr><th>Row</th><th>Title</th><th>Result</th></tr></thead>
+      <tbody>
+        {% for r in results %}
+          <tr>
+            <td>{{ r.row }}</td><td>{{ r.title }}</td>
+            <td>{% if r.errors %}<span class="error">{{ r.errors|join("; ") }}</span>{% else %}OK, will be created as a draft{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if ok %}
+      <form method="post" action="{{ url_for('admin.import_commit', batch_id=batch.id) }}" class="mt-16" data-confirm="Create {{ ok }} draft course(s)?">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn" type="submit">Create {{ ok }} draft(s)</button>
+        <a class="btn btn-ghost" href="{{ url_for('admin.import_csv') }}">Cancel</a>
+      </form>
+    {% else %}
+      <p><a class="btn btn-ghost" href="{{ url_for('admin.import_csv') }}">Back</a></p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Users — Owner Studio{% endblock %}
+{% block content %}
+<div class="container admin-shell">
+  {% include "admin/_nav.html" %}
+  <div>
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">Owner Studio</p>
+        <h1>User management</h1>
+        <p class="muted">{{ result.total }} registered account(s). Passwords are never displayed here.</p>
+      </div>
+    </div>
+
+    <p class="notice">Promote only people you trust. Administrators can access all Owner Studio controls. You cannot change your own account, and the last active administrator cannot be demoted or suspended.</p>
+
+    <form method="get" class="filters panel mb-20">
+      <div class="filter-search">
+        <input type="search" name="q" value="{{ q }}" placeholder="Search name or email" aria-label="Search users">
+      </div>
+      <div class="filters-actions">
+        <button class="btn btn-small" type="submit">Search</button>
+        <a class="btn btn-small btn-ghost" href="{{ url_for('admin.users') }}">Reset</a>
+      </div>
+    </form>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>Account</th><th>Registered</th><th>Status</th><th>Access</th><th>Manage account</th></tr>
+        </thead>
+        <tbody>
+          {% for user in result["items"] %}
+            <tr>
+              <td>
+                <a href="{{ url_for('admin.user_detail', user_id=user.id) }}"><strong>{{ user.display_name or "CourseFinder user" }}</strong></a>
+                <div class="field-hint">{{ user.email }}</div>
+              </td>
+              <td>{{ user.created_at[:10] if user.created_at else "—" }}</td>
+              <td><span class="pill {{ 'status-published' if user.is_active else 'status-archived' }}">{{ "Active" if user.is_active else "Suspended" }}</span></td>
+              <td><span class="pill">{{ user.role|title }}</span>{% if current_user and user.id == current_user.id %}<span class="field-hint"> · You</span>{% endif %}</td>
+              <td>
+                {% if current_user and user.id == current_user.id %}
+                  <span class="field-hint">Your account is protected</span>
+                {% else %}
+                  <div class="review-actions">
+                    <form method="post" action="{{ url_for('admin.user_role_update', user_id=user.id) }}" class="inline-form"
+                          data-confirm="{{ 'Grant administrator access to ' ~ user.email ~ '?' if user.role == 'user' else 'Remove administrator access from ' ~ user.email ~ '?' }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="role" value="{{ 'admin' if user.role == 'user' else 'user' }}">
+                      <input type="hidden" name="q" value="{{ q }}">
+                      <button class="btn btn-small {{ 'btn-secondary' if user.role == 'user' else 'btn-ghost' }}" type="submit">
+                        {{ "Promote to admin" if user.role == "user" else "Demote to user" }}
+                      </button>
+                    </form>
+                    {% if user.role == "admin" and user.is_active and admin_count <= 1 %}
+                      <span class="field-hint">Last active administrator</span>
+                    {% else %}
+                      <form method="post" action="{{ url_for('admin.user_status_update', user_id=user.id) }}" class="inline-form"
+                            data-confirm="{{ 'Suspend ' ~ user.email ~ '? They will be signed out and cannot log in until reactivated.' if user.is_active else 'Reactivate ' ~ user.email ~ '?' }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="status" value="{{ 'suspended' if user.is_active else 'active' }}">
+                        <input type="hidden" name="q" value="{{ q }}">
+                        <button class="btn btn-small {{ 'btn-danger' if user.is_active else 'btn-secondary' }}" type="submit">
+                          {{ "Suspend" if user.is_active else "Reactivate" }}
+                        </button>
+                      </form>
+                    {% endif %}
+                  </div>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="muted">No accounts match your search.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "partials/pager.html" %}
+  </div>
+</div>
+{% endblock %}

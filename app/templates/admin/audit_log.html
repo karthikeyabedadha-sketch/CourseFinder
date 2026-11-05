@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Audit log — Admin{% endblock %}
+{% block content %}
+<div class="container admin-shell">
+  {% include "admin/_nav.html" %}
+  <div>
+    <h1>Audit log</h1>
+    <p class="muted">Latest 200 actions. Entries cannot be edited from this site.</p>
+    <table class="table">
+      <thead><tr><th>When (UTC)</th><th>Who</th><th>What</th><th>Item</th><th>Change</th></tr></thead>
+      <tbody>
+        {% for a in actions %}
+          <tr>
+            <td>{{ a.created_at[:19]|replace("T", " ") }}</td>
+            <td>{{ a.actor_name or "system" }}</td>
+            <td>{{ a.entity_type }} · {{ a.action|replace("_", " ") }}</td>
+            <td>{{ a.label or a.entity_id or "" }}</td>
+            <td>{% if a.to_status %}{{ a.from_status or "" }} → {{ a.to_status }}{% endif %}{% if a.note %} · {{ a.note }}{% endif %}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5">Nothing recorded yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

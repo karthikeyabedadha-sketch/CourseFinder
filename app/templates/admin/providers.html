@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Providers — Admin{% endblock %}
+{% block content %}
+<div class="container admin-shell">
+  {% include "admin/_nav.html" %}
+  <div>
+    <h1>Providers</h1>
+    <form method="post" class="form-card mb-20">
+      {{ form.hidden_tag() }}
+      <div class="form-grid-2">
+        <div class="field">{{ form.name.label }} {{ form.name }}{% for e in form.name.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        <div class="field">{{ form.website_url.label }} {{ form.website_url(placeholder="https://...") }}{% for e in form.website_url.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+      </div>
+      <button class="btn" type="submit">Add provider</button>
+    </form>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Name</th><th>Website</th><th>Published / Total</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for provider in providers %}
+            <tr>
+              <td><strong>{{ provider.name }}</strong></td>
+              <td>{% if provider.website_url %}<a href="{{ provider.website_url }}" rel="noopener noreferrer" target="_blank">{{ provider.website_url }}</a>{% else %}—{% endif %}</td>
+              <td>{{ provider.published_count or 0 }} / {{ provider.total_count or 0 }}</td>
+              <td>
+                <a href="{{ url_for('admin.provider_update', provider_id=provider.id) }}">Edit</a>
+                {% if not provider.total_count %}
+                  · <form method="post" action="{{ url_for('admin.provider_delete', provider_id=provider.id) }}" class="inline-form" data-confirm="Delete provider {{ provider.name }}?">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="btn btn-small btn-danger" type="submit">Delete</button>
+                    </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4">No providers yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

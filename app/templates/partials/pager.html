@@ -1,0 +1,12 @@
+{% if result.pages > 1 %}
+<nav class="pagination" aria-label="Pagination">
+  {% set base_args = request.args.to_dict() %}
+  {% if result.page > 1 %}
+    <a class="btn btn-small btn-ghost" href="{{ url_for(request.endpoint, **dict(request.view_args or {}, **dict(base_args, page=result.page - 1))) }}">Previous</a>
+  {% endif %}
+  <span class="btn btn-small btn-secondary" aria-current="page">Page {{ result.page }} of {{ result.pages }}</span>
+  {% if result.page < result.pages %}
+    <a class="btn btn-small btn-ghost" href="{{ url_for(request.endpoint, **dict(request.view_args or {}, **dict(base_args, page=result.page + 1))) }}">Next</a>
+  {% endif %}
+</nav>
+{% endif %}

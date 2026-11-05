@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Delete course — CourseFinder{% endblock %}
+{% block content %}
+<div class="container section">
+  <div class="form-card">
+    <h1>Delete {{ course.title }}?</h1>
+    <p>Prefer archiving if you may need the record later. Deletion is permanent.</p>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="field">
+        <label for="confirm">Type the course title to confirm</label>
+        <input id="confirm" name="confirm" required>
+      </div>
+      <button class="btn btn-danger" type="submit">Delete permanently</button>
+      <a class="btn btn-ghost" href="{{ url_for('admin.course_edit', course_id=course.id) }}">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

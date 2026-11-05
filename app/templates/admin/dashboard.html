@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Owner Studio — CourseFinder{% endblock %}
+{% block content %}
+<div class="container admin-shell">
+  {% include "admin/_nav.html" %}
+  <div>
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">Private Admin Control Centre</p>
+        <h1>CourseFinder Owner Studio</h1>
+        <p class="muted">Manage your course catalogue, editorial workflow, pricing breakdown, and AI-assisted drafting in one place.</p>
+      </div>
+      <div class="flex-wrap-gap">
+        <a class="btn btn-small" href="{{ url_for('admin.course_new') }}">+ New Course (Draft)</a>
+        <a class="btn btn-small btn-secondary" href="{{ url_for('admin.ai_assistant') }}">✦ AI Content Assistant</a>
+        <a class="btn btn-small btn-ghost" href="{{ url_for('admin.courses') }}">Course Manager</a>
+        <a class="btn btn-small btn-ghost" href="{{ url_for('admin.import_csv') }}">Import CSV</a>
+        <a class="btn btn-small btn-ghost" href="{{ url_for('admin.export_csv') }}">Export CSV</a>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <article class="stat-card">
+        <p class="muted">Total courses</p>
+        <h2><a href="{{ url_for('admin.courses') }}">{{ counts.total_courses }}</a></h2>
+      </article>
+      <article class="stat-card">
+        <p class="muted">Published (live)</p>
+        <h2><a href="{{ url_for('admin.courses', status='published') }}">{{ counts.published_courses }}</a></h2>
+      </article>
+      <article class="stat-card">
+        <p class="muted">Drafts (private)</p>
+        <h2><a href="{{ url_for('admin.courses', status='draft') }}">{{ counts.draft_courses }}</a></h2>
+      </article>
+      <article class="stat-card">
+        <p class="muted">Free courses ({{ counts.free_published_courses }} live)</p>
+        <h2><a href="{{ url_for('admin.courses', pricing='free') }}">{{ counts.free_courses }}</a></h2>
+      </article>
+      <article class="stat-card">
+        <p class="muted">Paid courses ({{ counts.paid_published_courses }} live)</p>
+        <h2><a href="{{ url_for('admin.courses', pricing='paid') }}">{{ counts.paid_courses }}</a></h2>
+      </article>
+      <article class="stat-card">
+        <p class="muted">Pending review</p>
+        <h2><a href="{{ url_for('admin.courses', status='pending_review') }}">{{ counts.pending_courses }}</a></h2>
+      </article>
+      <article class="stat-card">
+        <p class="muted">Approved, not live</p>
+        <h2><a href="{{ url_for('admin.courses', status='approved') }}">{{ counts.approved_courses }}</a></h2>
+      </article>
+      <article class="stat-card">
+        <p class="muted">Archived</p>
+        <h2><a href="{{ url_for('admin.courses', status='archived') }}">{{ counts.archived_courses }}</a></h2>
+      </article>
+      <article class="stat-card">
+        <p class="muted">Featured (live)</p>
+        <h2><a href="{{ url_for('admin.courses', flag='featured') }}">{{ counts.featured_courses }}</a></h2>
+      </article>
+      <article class="stat-card">
+        <p class="muted">Underrated gems (live)</p>
+        <h2><a href="{{ url_for('admin.courses', flag='underrated') }}">{{ counts.underrated_courses }}</a></h2>
+      </article>
+      <article class="stat-card">
+        <p class="muted">Needs verification</p>
+        <h2><a href="{{ url_for('admin.courses', flag='needs_verification') }}">{{ counts.needs_verification }}</a></h2>
+      </article>
+      <article class="stat-card">
+        <p class="muted">Live, not checked in 6m</p>
+        <h2>{{ counts.stale_verification }}</h2>
+      </article>
+      <article class="stat-card">
+        <p class="muted">Registered users</p>
+        <h2><a href="{{ url_for('admin.users') }}">{{ counts.total_users }}</a></h2>
+      </article>
+      <article class="stat-card">
+        <p class="muted">Total reviews</p>
+        <h2><a href="{{ url_for('admin.reviews', status='all') }}">{{ counts.total_reviews }}</a></h2>
+      </article>
+      <article class="stat-card">
+        <p class="muted">Reviews to moderate</p>
+        <h2><a href="{{ url_for('admin.reviews') }}">{{ counts.reviews_pending }}</a></h2>
+      </article>
+      <article class="stat-card">
+        <p class="muted">Open reports &amp; suggestions</p>
+        <h2><a href="{{ url_for('admin.reports') }}">{{ counts.reports_pending }}</a> / <a href="{{ url_for('admin.submissions') }}">{{ counts.submissions_pending }}</a></h2>
+      </article>
+    </div>
+
+    {% if pending_reviews %}
+      <h2 class="mt-28">Pending reviews awaiting moderation</h2>
+      {% for review in pending_reviews %}
+        <article class="panel pad-16 mb-12">
+          <p><strong>{{ review.course_title }}</strong> · {{ review.display_name }} ({{ review.email }}) · ★ {{ review.rating }}/5</p>
+          <p class="pre-wrap">{{ review.body }}</p>
+          <div class="review-actions mt-12">
+            <form method="post" action="{{ url_for('admin.review_status', review_id=review.id) }}" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-small" name="status" value="approved" type="submit">Approve</button>
+              <button class="btn btn-small btn-ghost" name="status" value="rejected" type="submit">Reject</button>
+            </form>
+          </div>
+        </article>
+      {% endfor %}
+    {% endif %}
+
+    <h2 class="mt-28">Recent activity</h2>
+    {% if recent_actions %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>When (UTC)</th><th>Actor</th><th>Action</th><th>Target</th><th>Details</th></tr></thead>
+          <tbody>
+            {% for a in recent_actions %}
+              <tr>
+                <td>{{ a.created_at[:16]|replace("T", " ") }}</td>
+                <td>{{ a.actor_name or "system" }}</td>
+                <td>{{ a.entity_type }} · {{ a.action|replace("_", " ") }}</td>
+                <td>{{ a.label or a.entity_id or "—" }}</td>
+                <td>{% if a.to_status %}{{ a.from_status or "" }} → {{ a.to_status }}{% endif %}{% if a.note %} {{ a.note }}{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="mt-12"><a href="{{ url_for('admin.audit_log') }}">View full audit log →</a></p>
+    {% else %}
+      <p class="muted">Nothing recorded yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

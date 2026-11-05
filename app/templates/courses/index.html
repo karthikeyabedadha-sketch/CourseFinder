@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Explore courses — CourseFinder{% endblock %}
+{% block content %}
+<section class="container section">
+  <h1>Explore courses</h1>
+  <p class="muted">Every result below is an editorially verified, published record. CourseFinder points you to the official provider and never invents course details.</p>
+
+  <form class="filters panel" method="get" role="search">
+    <div class="filter-search">
+      <label class="visually-hidden" for="q">Search keyword</label>
+      <input id="q" type="search" name="q" value="{{ filters.q if result.total else '' }}" placeholder="Search title, provider, skill, or keyword">
+    </div>
+    <div>
+      <label class="visually-hidden" for="category">Category</label>
+      <select id="category" name="category" aria-label="Category">
+        <option value="">All categories</option>
+        {% for category in categories %}
+          <option value="{{ category.slug }}" {% if filters.category_slug == category.slug %}selected{% endif %}>{{ category.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="visually-hidden" for="provider">Provider</label>
+      <select id="provider" name="provider" aria-label="Provider">
+        <option value="">All providers</option>
+        {% for provider in providers %}
+          <option value="{{ provider.id }}" {% if filters.provider_id == provider.id %}selected{% endif %}>{{ provider.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="visually-hidden" for="pricing">Pricing</label>
+      <select id="pricing" name="pricing" aria-label="Pricing">
+        <option value="">Free or paid</option>
+        <option value="free" {% if filters.pricing == "free" %}selected{% endif %}>Free only</option>
+        <option value="paid" {% if filters.pricing == "paid" %}selected{% endif %}>Paid only</option>
+      </select>
+    </div>
+    <div>
+      <label class="visually-hidden" for="difficulty">Difficulty</label>
+      <select id="difficulty" name="difficulty" aria-label="Difficulty">
+        <option value="">Any difficulty</option>
+        <option value="beginner" {% if filters.difficulty == "beginner" %}selected{% endif %}>Beginner</option>
+        <option value="intermediate" {% if filters.difficulty == "intermediate" %}selected{% endif %}>Intermediate</option>
+        <option value="advanced" {% if filters.difficulty == "advanced" %}selected{% endif %}>Advanced</option>
+      </select>
+    </div>
+    {% if languages %}
+    <div>
+      <label class="visually-hidden" for="language">Language</label>
+      <select id="language" name="language" aria-label="Language">
+        <option value="">Any language</option>
+        {% for lang in languages %}
+          <option value="{{ lang }}" {% if filters.language|lower == lang|lower %}selected{% endif %}>{{ lang }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <div>
+      <label class="visually-hidden" for="min_rating">Minimum rating</label>
+      <select id="min_rating" name="min_rating" aria-label="Minimum user rating">
+        <option value="">Any user rating</option>
+        <option value="4" {% if filters.min_rating == "4" %}selected{% endif %}>4.0+ stars</option>
+        <option value="3" {% if filters.min_rating == "3" %}selected{% endif %}>3.0+ stars</option>
+      </select>
+    </div>
+    <div>
+      <label class="visually-hidden" for="sort">Sort by</label>
+      <select id="sort" name="sort" aria-label="Sort">
+        <option value="newest" {% if filters.sort == "newest" %}selected{% endif %}>Newest published</option>
+        <option value="editorial" {% if filters.sort == "editorial" %}selected{% endif %}>Editorial score</option>
+        <option value="rating" {% if filters.sort == "rating" %}selected{% endif %}>Highest user rating</option>
+        <option value="price_low" {% if filters.sort == "price_low" %}selected{% endif %}>Price: low to high</option>
+        <option value="price_high" {% if filters.sort == "price_high" %}selected{% endif %}>Price: high to low</option>
+        <option value="title" {% if filters.sort == "title" %}selected{% endif %}>Alphabetical (A–Z)</option>
+      </select>
+    </div>
+    <div class="filters-actions">
+      <label class="filter-check">
+        <input type="checkbox" name="underrated" value="1" {% if filters.underrated %}checked{% endif %}>
+        <span>Underrated gems</span>
+      </label>
+      <label class="filter-check">
+        <input type="checkbox" name="featured" value="1" {% if filters.featured %}checked{% endif %}>
+        <span>Featured</span>
+      </label>
+    </div>
+    <div class="filters-actions">
+      <button class="btn" type="submit">Apply</button>
+      <a class="btn btn-ghost" href="{{ url_for('public.courses') }}">Clear filters</a>
+    </div>
+  </form>
+
+  <div class="results-bar">
+    <p class="muted">{{ result.total }} published course{{ "" if result.total == 1 else "s" }} found</p>
+  </div>
+
+  {% if result["items"] %}
+    <div class="card-grid">
+      {% for course in result["items"] %}
+        {% include "partials/course_card.html" %}
+      {% endfor %}
+    </div>
+    {% include "partials/pager.html" %}
+  {% else %}
+    <div class="empty-state panel">
+      No published courses match those filters. Try clearing a filter or searching a broader term.
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

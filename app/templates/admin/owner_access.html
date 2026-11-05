@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Owner Access — CourseFinder</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body class="owner-access-page">
+  <main class="owner-access-wrap">
+    <section class="owner-access-card">
+      <p class="eyebrow">CourseFinder · Private</p>
+      <h1>Owner Studio</h1>
+      <p class="muted">Enter your owner secret to unlock the control centre.</p>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <p class="flash flash-{{ category }}" role="status">{{ message }}</p>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      {% if error %}
+        <p class="flash flash-error" role="alert">{{ error }}</p>
+      {% endif %}
+      <form method="post" action="{{ url_for('admin.studio') }}" class="owner-access-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="sr-only" for="owner-secret">Owner password</label>
+        <input
+          id="owner-secret"
+          name="owner_secret"
+          type="password"
+          autocomplete="current-password"
+          required
+          autofocus
+          aria-label="Owner password"
+        >
+        <button class="btn" type="submit">Unlock Owner Studio</button>
+      </form>
+    </section>
+  </main>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

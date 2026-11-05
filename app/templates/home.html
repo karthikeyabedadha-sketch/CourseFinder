@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}CourseFinder — Find courses worth your time{% endblock %}
+{% block content %}
+<section class="container hero">
+  <div>
+    <p class="eyebrow">Curated course discovery</p>
+    <h1>Find Courses Worth Your Time.</h1>
+    <p class="lede">Discover carefully evaluated courses in computer science, AI, data science, finance, design, and business — including underrated gems that deserve more attention.</p>
+    <form class="search-panel" action="{{ url_for('public.courses') }}" method="get" role="search">
+      <label class="visually-hidden" for="q">Search courses</label>
+      <input id="q" name="q" type="search" placeholder="Search by title, provider, skill, or topic">
+      <button class="btn" type="submit">Search</button>
+      <a class="btn btn-ghost" href="{{ url_for('public.courses') }}">Browse Catalogue</a>
+    </form>
+    <div class="quick-links" aria-label="Quick filters">
+      <span class="muted">Quick filters:</span>
+      <a href="{{ url_for('public.courses', pricing='free') }}">Free courses</a>
+      <a href="{{ url_for('public.courses', underrated=1) }}">Underrated gems</a>
+      <a href="{{ url_for('public.courses', featured=1) }}">Featured picks</a>
+      <a href="{{ url_for('public.courses', difficulty='beginner') }}">Beginner friendly</a>
+    </div>
+  </div>
+  <aside class="hero-aside">
+    <h2>Editorial, not a marketplace.</h2>
+    <p>Every public listing is verified and published by an administrator. CourseFinder recommends external courses — we never host lessons, invent details, or auto-publish unverified listings.</p>
+    <ol>
+      <li>Search the catalogue or filter by skill and difficulty</li>
+      <li>Read transparent editorial assessments and moderated reviews</li>
+      <li>Enrol directly on the official provider's website</li>
+    </ol>
+  </aside>
+</section>
+
+<section class="container section">
+  <div class="section-header">
+    <div>
+      <h2>Featured courses</h2>
+      <p class="muted">Editorially selected courses that stand out for depth, clarity, and practical value.</p>
+    </div>
+    <a class="btn btn-small btn-ghost" href="{{ url_for('public.courses', featured=1) }}">View all featured</a>
+  </div>
+  {% if featured %}
+    <div class="card-grid">
+      {% for course in featured %}
+        {% include "partials/course_card.html" %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state panel">No featured courses are published yet.</div>
+  {% endif %}
+</section>
+
+<section class="container section">
+  <div class="section-header">
+    <div>
+      <h2>Underrated &amp; less-known gems</h2>
+      <p class="muted">High-value courses from universities, practitioners, and independent educators outside the usual hype cycle.</p>
+    </div>
+    <a class="btn btn-small btn-ghost" href="{{ url_for('public.courses', underrated=1) }}">Explore underrated gems</a>
+  </div>
+  {% if underrated %}
+    <div class="card-grid">
+      {% for course in underrated %}
+        {% include "partials/course_card.html" %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state panel">No underrated gems have been published yet. Check back as editors review new listings.</div>
+  {% endif %}
+</section>
+
+<section class="container section">
+  <div class="section-header">
+    <div>
+      <h2>Explore by category</h2>
+      <p class="muted">Structured disciplines across technology, quantitative skills, business, and design.</p>
+    </div>
+    <a class="btn btn-small btn-ghost" href="{{ url_for('public.categories') }}">All categories</a>
+  </div>
+  <div class="category-grid">
+    {% for category in categories %}
+      <a class="category-tile panel" href="{{ url_for('public.category_detail', slug=category.slug) }}">
+        <div>
+          <h3>{{ category.name }}</h3>
+          <p>{{ category.description }}</p>
+        </div>
+        <span class="category-count">{{ category.published_count or 0 }} published course{{ "" if (category.published_count or 0) == 1 else "s" }} →</span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+{% if recent %}
+<section class="container section">
+  <div class="section-header">
+    <div>
+      <h2>Recently published</h2>
+      <p class="muted">Latest courses verified and published by the editorial team.</p>
+    </div>
+    <a class="btn btn-small btn-ghost" href="{{ url_for('public.courses', sort='newest') }}">Browse full catalogue</a>
+  </div>
+  <div class="card-grid">
+    {% for course in recent %}
+      {% include "partials/course_card.html" %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="container section">
+  <h2>How it works</h2>
+  <div class="steps">
+    <article class="step-card panel"><span>1</span><h3>Explore courses</h3><p>Browse the catalogue or search by title, provider, skill, and topic.</p></article>
+    <article class="step-card panel"><span>2</span><h3>Compare options</h3><p>Filter by category, price, difficulty, provider, or underrated status.</p></article>
+    <article class="step-card panel"><span>3</span><h3>Read assessments</h3><p>Check transparent editorial notes and moderated learner reviews.</p></article>
+    <article class="step-card panel"><span>4</span><h3>Save to library</h3><p>Bookmark courses to compare and plan your learning path.</p></article>
+    <article class="step-card panel"><span>5</span><h3>Visit the provider</h3><p>Enrol on the original site. CourseFinder is a guide, not the classroom.</p></article>
+  </div>
+  <p class="mt-16"><a href="{{ url_for('public.how_it_works') }}">Read the full explanation</a></p>
+</section>
+{% endblock %}

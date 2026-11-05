@@ -1,0 +1,24 @@
+<nav class="admin-nav panel pad-16" aria-label="Owner Studio">
+  <div class="studio-brand">
+    <span class="eyebrow">Owner Studio</span>
+    <p class="field-hint">Private control centre</p>
+  </div>
+  <a href="{{ url_for('admin.dashboard') }}" {% if request.endpoint == 'admin.dashboard' %}aria-current="page"{% endif %}>Studio Dashboard</a>
+  <a href="{{ url_for('admin.courses') }}" {% if request.endpoint in ('admin.courses', 'admin.course_edit') %}aria-current="page"{% endif %}>Course Manager</a>
+  <a href="{{ url_for('admin.course_new') }}" {% if request.endpoint == 'admin.course_new' %}aria-current="page"{% endif %}>+ Course Editor (New)</a>
+  <a href="{{ url_for('admin.ai_assistant') }}" {% if request.endpoint == 'admin.ai_assistant' %}aria-current="page"{% endif %}>✦ AI Content Assistant</a>
+  <a href="{{ url_for('admin.categories') }}" {% if request.endpoint in ('admin.categories', 'admin.category_update') %}aria-current="page"{% endif %}>Categories</a>
+  <a href="{{ url_for('admin.providers') }}" {% if request.endpoint in ('admin.providers', 'admin.provider_update') %}aria-current="page"{% endif %}>Providers</a>
+  <a href="{{ url_for('admin.users') }}" {% if request.endpoint in ('admin.users', 'admin.user_detail', 'admin.user_role_update', 'admin.user_status_update') %}aria-current="page"{% endif %}>Users</a>
+  <a href="{{ url_for('admin.reviews') }}" {% if request.endpoint in ('admin.reviews', 'admin.review_status', 'admin.review_delete') %}aria-current="page"{% endif %}>Reviews</a>
+  <a href="{{ url_for('admin.reports') }}" {% if request.endpoint in ('admin.reports', 'admin.report_resolve') %}aria-current="page"{% endif %}>Reports</a>
+  <a href="{{ url_for('admin.submissions') }}" {% if request.endpoint in ('admin.submissions', 'admin.submission_decide') %}aria-current="page"{% endif %}>Suggestions</a>
+  <a href="{{ url_for('admin.messages') }}" {% if request.endpoint in ('admin.messages', 'admin.message_handled') %}aria-current="page"{% endif %}>Messages</a>
+  <a href="{{ url_for('admin.import_csv') }}" {% if request.endpoint in ('admin.import_csv', 'admin.import_preview', 'admin.import_commit') %}aria-current="page"{% endif %}>Import CSV</a>
+  <a href="{{ url_for('admin.export_csv') }}">Export CSV</a>
+  <a href="{{ url_for('admin.audit_log') }}" {% if request.endpoint == 'admin.audit_log' %}aria-current="page"{% endif %}>Audit log</a>
+  <form method="post" action="{{ url_for('admin.owner_logout') }}" class="owner-logout-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-small btn-ghost" type="submit">Lock Owner Studio</button>
+  </form>
+</nav>

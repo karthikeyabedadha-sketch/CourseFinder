@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Edit provider — Admin{% endblock %}
+{% block content %}
+<div class="container admin-shell">
+  {% include "admin/_nav.html" %}
+  <div class="form-card">
+    <h1>Edit provider</h1>
+    <form method="post">
+      {{ form.hidden_tag() }}
+      {% for f in [form.name, form.website_url] %}
+        <div class="field">{{ f.label }} {{ f }}{% for e in f.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+      {% endfor %}
+      <button class="btn" type="submit">Save</button>
+      <a class="btn btn-ghost" href="{{ url_for('admin.providers') }}">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

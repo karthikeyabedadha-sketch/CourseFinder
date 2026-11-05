@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Suggest a course — CourseFinder{% endblock %}
+{% block content %}
+<section class="container section">
+  <div class="account-subnav" aria-label="Account navigation">
+    <a class="btn btn-small btn-ghost" href="{{ url_for('account.library') }}">My library</a>
+    <a class="btn btn-small btn-ghost" href="{{ url_for('account.profile') }}">Profile &amp; security</a>
+    <a class="btn btn-small btn-secondary" href="{{ url_for('account.submit_course') }}">Suggest a course</a>
+  </div>
+
+  <div class="form-card">
+    <h1>Suggest a course</h1>
+    <p class="notice">
+      Know an underrated or high-value course that deserves more attention? Share the official link below.
+      Suggestions are reviewed by an administrator and are never published automatically.
+    </p>
+    <form method="post" action="{{ url_for('account.submit_course') }}">
+      {{ form.hidden_tag() }}
+      <div class="field">
+        {{ form.title.label }}
+        {{ form.title(placeholder="e.g. Missing Semester of Your CS Education") }}
+        {% for e in form.title.errors %}<div class="error">{{ e }}</div>{% endfor %}
+      </div>
+      <div class="field">
+        {{ form.official_url.label }}
+        {{ form.official_url(placeholder="https://missing.csail.mit.edu/") }}
+        {% for e in form.official_url.errors %}<div class="error">{{ e }}</div>{% endfor %}
+      </div>
+      <div class="field">
+        {{ form.provider_name.label }}
+        {{ form.provider_name(placeholder="e.g. MIT CSAIL") }}
+        {% for e in form.provider_name.errors %}<div class="error">{{ e }}</div>{% endfor %}
+      </div>
+      <div class="field">
+        {{ form.note.label }}
+        {{ form.note(rows=4, placeholder="What makes this course genuinely valuable or underrated?") }}
+        {% for e in form.note.errors %}<div class="error">{{ e }}</div>{% endfor %}
+      </div>
+      <button class="btn" type="submit">Submit suggestion</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

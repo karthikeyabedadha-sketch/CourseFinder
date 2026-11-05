@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}AI Content Assistant — Owner Studio{% endblock %}
+{% block content %}
+<div class="container admin-shell">
+  {% include "admin/_nav.html" %}
+  <div class="form-card">
+    <p class="eyebrow">Owner Studio</p>
+    <h1>✦ AI Content Assistant</h1>
+    <p class="notice">
+      This in-app, rule-based assistant generates editable course summaries, descriptions, learning outcomes, skills, search tags, and category suggestions from a course title or raw syllabus notes. It does not use an external AI service; verify suggestions against the official course page.
+      <strong>Editorial rule:</strong> It does not invent prices or durations, and any course saved here starts strictly as an <strong>unverified draft</strong>.
+    </p>
+
+    <form method="post" action="{{ url_for('admin.ai_assistant') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <fieldset class="fieldset-group">
+        <legend>1. Course Context &amp; Raw Notes</legend>
+        <div class="form-grid-2">
+          <div class="field">
+            <label for="title">Course title</label>
+            <input id="title" name="title" type="text" value="{{ values.title }}" placeholder="e.g. Distributed Systems Engineering">
+          </div>
+          <div class="field">
+            <label for="official_url">Official course URL (required only when saving as draft)</label>
+            <input id="official_url" name="official_url" type="url" value="{{ values.official_url }}" placeholder="https://...">
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="field">
+            <label for="category_id">Category</label>
+            <select id="category_id" name="category_id">
+              {% for c in categories %}
+                <option value="{{ c.id }}" {% if values.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="difficulty">Difficulty</label>
+            <select id="difficulty" name="difficulty">
+              <option value="">Unknown / Any</option>
+              {% for d in difficulties %}
+                <option value="{{ d }}" {% if values.difficulty == d %}selected{% endif %}>{{ d|title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="field">
+            <label for="provider_id">Existing provider</label>
+            <select id="provider_id" name="provider_id">
+              <option value="">Select provider (optional)</option>
+              {% for p in providers %}
+                <option value="{{ p.id }}" {% if values.provider_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="new_provider_name">Or new provider name</label>
+            <input id="new_provider_name" name="new_provider_name" type="text" value="{{ values.new_provider_name }}" placeholder="e.g. MIT OpenCourseWare">
+          </div>
+        </div>
+        <div class="field">
+          <label for="raw_notes">Raw syllabus, topics, or draft text to analyse / improve</label>
+          <textarea id="raw_notes" name="raw_notes" rows="4" placeholder="Paste syllabus topics, bullet points, or rough description notes...">{{ values.raw_notes }}</textarea>
+        </div>
+        <div class="review-actions">
+          <button class="btn" type="submit" name="action" value="generate">✦ Generate &amp; Improve Content</button>
+        </div>
+      </fieldset>
+
+      {% if suggestions %}
+        <fieldset class="fieldset-group">
+          <legend>2. Generated Suggestions (Review &amp; Edit Before Saving as Draft)</legend>
+          <div class="field">
+            <label for="short_description">Short description (max 280 chars)</label>
+            <textarea id="short_description" name="short_description" rows="2">{{ values.short_description }}</textarea>
+          </div>
+          <div class="field">
+            <label for="description">Full course description</label>
+            <textarea id="description" name="description" rows="6">{{ values.description }}</textarea>
+          </div>
+          <div class="form-grid-2">
+            <div class="field">
+              <label for="skills_taught">Skills taught (one per line)</label>
+              <textarea id="skills_taught" name="skills_taught" rows="5">{{ values.skills_taught }}</textarea>
+            </div>
+            <div class="field">
+              <label for="learning_outcomes">Learning outcomes (one per line)</label>
+              <textarea id="learning_outcomes" name="learning_outcomes" rows="5">{{ values.learning_outcomes }}</textarea>
+            </div>
+          </div>
+          <div class="field">
+            <p><strong>Suggested category:</strong> {{ values.category_suggestion or "Choose a category manually" }}</p>
+            <p class="field-hint">Category suggestions are rule-based. Select or change the category above before saving.</p>
+          </div>
+          <div class="form-grid-2">
+            <div class="field">
+              <label for="keywords">Search tags / keywords</label>
+              <textarea id="keywords" name="keywords" rows="3">{{ values.keywords }}</textarea>
+              <label for="prerequisites" class="mt-12">Suggested prerequisites</label>
+              <textarea id="prerequisites" name="prerequisites" rows="2">{{ values.prerequisites }}</textarea>
+            </div>
+          </div>
+          <div class="field">
+            <label for="intended_audience">Intended audience</label>
+            <textarea id="intended_audience" name="intended_audience" rows="2">{{ values.intended_audience }}</textarea>
+          </div>
+          <div class="field">
+            <label for="editorial_assessment">Personal recommendation / editorial assessment outline (unapproved draft)</label>
+            <textarea id="editorial_assessment" name="editorial_assessment" rows="3">{{ values.editorial_assessment }}</textarea>
+          </div>
+          <div class="form-grid-2">
+            <div class="field">
+              <label for="editorial_who_should_take">Who should take it</label>
+              <textarea id="editorial_who_should_take" name="editorial_who_should_take" rows="2">{{ values.editorial_who_should_take }}</textarea>
+            </div>
+            <div class="field">
+              <label for="editorial_who_should_avoid">Who should avoid it</label>
+              <textarea id="editorial_who_should_avoid" name="editorial_who_should_avoid" rows="2">{{ values.editorial_who_should_avoid }}</textarea>
+            </div>
+          </div>
+          <div class="review-actions mt-12">
+            <button class="btn btn-secondary" type="submit" name="action" value="save_draft">Save as Unverified Course Draft →</button>
+            <a class="btn btn-ghost" href="{{ url_for('admin.courses') }}">Back to Course Manager</a>
+          </div>
+        </fieldset>
+      {% endif %}
+    </form>
+  </div>
+</div>
+{% endblock %}

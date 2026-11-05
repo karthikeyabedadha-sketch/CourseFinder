@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Profile & Security — CourseFinder{% endblock %}
+{% block content %}
+<section class="container section">
+  <div class="account-subnav" aria-label="Account navigation">
+    <a class="btn btn-small btn-ghost" href="{{ url_for('account.library') }}">My library</a>
+    <a class="btn btn-small btn-secondary" href="{{ url_for('account.profile') }}">Profile &amp; security</a>
+    <a class="btn btn-small btn-ghost" href="{{ url_for('account.submit_course') }}">Suggest a course</a>
+  </div>
+
+  <h1>Profile &amp; security</h1>
+  <div class="split">
+    <div class="form-card">
+      <h2>Public profile</h2>
+      <p class="muted">Your display name is shown next to your approved course reviews.</p>
+      <p><strong>Email:</strong> {{ current_user.email }}</p>
+      <p><strong>Account role:</strong> {{ current_user.role|title }}</p>
+      <form method="post" action="{{ url_for('account.profile') }}">
+        {{ form.hidden_tag() }}
+        <input type="hidden" name="action" value="profile">
+        <div class="field">
+          {{ form.display_name.label }}
+          {{ form.display_name }}
+          {% for e in form.display_name.errors %}<div class="error">{{ e }}</div>{% endfor %}
+        </div>
+        <button class="btn" type="submit">Save display name</button>
+      </form>
+    </div>
+
+    <div class="form-card">
+      <h2>Change password</h2>
+      <p class="muted">Choose a strong password of at least 8 characters.</p>
+      <form method="post" action="{{ url_for('account.profile') }}">
+        {{ password_form.hidden_tag() }}
+        <input type="hidden" name="action" value="password">
+        <div class="field">
+          {{ password_form.current_password.label }}
+          {{ password_form.current_password }}
+          {% for e in password_form.current_password.errors %}<div class="error">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="field">
+          {{ password_form.new_password.label }}
+          {{ password_form.new_password }}
+          {% for e in password_form.new_password.errors %}<div class="error">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="field">
+          {{ password_form.confirm_password.label }}
+          {{ password_form.confirm_password }}
+          {% for e in password_form.confirm_password.errors %}<div class="error">{{ e }}</div>{% endfor %}
+        </div>
+        <button class="btn btn-secondary" type="submit">Update password</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

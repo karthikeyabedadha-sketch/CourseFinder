@@ -1,0 +1,39 @@
+<article class="course-card">
+  <div class="course-card-body">
+    <div class="card-meta">
+      <span class="pill">{{ course.category_name or "Uncategorised" }}</span>
+      {% if course.is_free == True %}
+        <span class="pill pill-free">Free</span>
+      {% elif course.is_free == False %}
+        <span class="pill pill-paid">Paid{% if course.price is not none %} · {{ course.currency or "USD" }} {{ "%.2f"|format(course.price) }}{% endif %}</span>
+      {% else %}
+        <span class="pill">Price unknown</span>
+      {% endif %}
+      {% if course.is_featured %}
+        <span class="pill pill-featured">Featured</span>
+      {% endif %}
+      {% if course.is_underrated %}
+        <span class="pill pill-underrated">Underrated Gem</span>
+      {% endif %}
+    </div>
+    <h3><a href="{{ url_for('public.course_detail', slug=course.slug) }}">{{ course.title }}</a></h3>
+    <p class="provider">{{ course.provider_name or "Provider unknown" }}</p>
+    <p class="meta-inline">
+      {% if course.difficulty %}{{ course.difficulty|replace("_", " ")|title }}{% else %}Difficulty unverified{% endif %}
+      {% if course.duration and course.duration_verified %} · {{ course.duration }}{% endif %}
+      {% if course.language %} · {{ course.language }}{% endif %}
+    </p>
+    <p>{{ course.short_description }}</p>
+  </div>
+  <div class="course-card-footer">
+    <div class="card-scores">
+      {% if course.editorial_approved and course.editorial_score_public and course.editorial_score is not none %}
+        <span class="score-pill">Editorial {{ course.editorial_score }}/10</span>
+      {% endif %}
+      {% if course.user_rating is not none %}
+        <span class="score-pill">★ {{ course.user_rating }}/5 ({{ course.review_count }})</span>
+      {% endif %}
+    </div>
+    <a class="btn btn-small btn-secondary" href="{{ url_for('public.course_detail', slug=course.slug) }}">View Course</a>
+  </div>
+</article>

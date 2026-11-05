@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ category.name }} — CourseFinder{% endblock %}
+{% block content %}
+<section class="container section">
+  <p class="breadcrumb"><a href="{{ url_for('public.categories') }}">Categories</a> · {{ category.name }}</p>
+  <div class="section-header">
+    <div>
+      <h1>{{ category.name }}</h1>
+      <p class="muted">{{ category.description }}</p>
+    </div>
+    <a class="btn btn-small btn-ghost" href="{{ url_for('public.courses', category=category.slug) }}">Filter in full catalogue</a>
+  </div>
+  {% if result["items"] %}
+    <div class="card-grid">
+      {% for course in result["items"] %}
+        {% include "partials/course_card.html" %}
+      {% endfor %}
+    </div>
+    {% include "partials/pager.html" %}
+  {% else %}
+    <div class="empty-state panel">No published courses in this category yet.</div>
+  {% endif %}
+</section>
+{% endblock %}

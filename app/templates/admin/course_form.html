@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}{{ "Course Editor: " ~ course.title if course else "Course Editor: New Course" }} — Owner Studio{% endblock %}
+{% block content %}
+<div class="container admin-shell">
+  {% include "admin/_nav.html" %}
+  <div class="form-card">
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">Owner Studio · Course Editor</p>
+        <h1>{{ "Edit course" if course else "Add a new course" }}</h1>
+      </div>
+      {% if course %}
+        <div class="flex-wrap-gap">
+          <a class="btn btn-small btn-ghost" href="{{ url_for('admin.course_preview', course_id=course.id) }}">Preview page</a>
+          {% if course.status == 'published' %}
+            <a class="btn btn-small btn-secondary" href="{{ url_for('public.course_detail', slug=course.slug) }}">View live page ↗</a>
+          {% else %}
+            <a class="btn btn-small btn-danger" href="{{ url_for('admin.course_delete', course_id=course.id) }}">Delete…</a>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+
+    {% if course %}
+      <section class="workflow-panel panel pad-16 mb-20" aria-label="Publishing workflow">
+        <div class="section-header">
+          <div>
+            <p><strong>Publishing workflow status:</strong> {% with status=course.status, labels=status_labels %}{% include "partials/status_badge.html" %}{% endwith %}
+              {% if course.origin and course.origin != 'admin' %}<span class="pill">Origin: {{ course.origin }}</span>{% endif %}
+            </p>
+            <p class="muted">{{ status_help[course.status] }}</p>
+          </div>
+        </div>
+        <div class="review-actions">
+          {% for target, label in transitions %}
+            <form method="post" action="{{ url_for('admin.course_transition', course_id=course.id) }}" class="inline-form"
+                  {% if target in ('published', 'archived') or course.status == 'published' %}data-confirm="{{ label }}: are you sure?"{% endif %}>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="target" value="{{ target }}">
+              <button class="btn btn-small {% if target == 'published' %}btn{% elif target == 'approved' %}btn-secondary{% else %}btn-ghost{% endif %}" type="submit">{{ label }}</button>
+            </form>
+          {% endfor %}
+        </div>
+
+        <div class="review-actions mt-12">
+          <span class="field-hint">Quick curation badges:</span>
+          <form method="post" action="{{ url_for('admin.course_flag', course_id=course.id) }}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="flag" value="is_featured">
+            <button class="btn btn-small {% if course.is_featured %}btn-secondary{% else %}btn-ghost{% endif %}" type="submit">
+              {{ "★ Featured (click to unfeature)" if course.is_featured else "☆ Mark as Featured" }}
+            </button>
+          </form>
+          <form method="post" action="{{ url_for('admin.course_flag', course_id=course.id) }}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="flag" value="is_underrated">
+            <button class="btn btn-small {% if course.is_underrated %}btn-secondary{% else %}btn-ghost{% endif %}" type="submit">
+              {{ "◆ Underrated Gem (click to remove)" if course.is_underrated else "◇ Mark as Underrated Gem" }}
+            </button>
+          </form>
+        </div>
+        <p class="field-hint mt-12">Saving the editor form below updates course content without changing publication status. Only the workflow buttons above publish or unpublish a course.</p>
+      </section>
+    {% else %}
+      <p class="notice">Every new course defaults to <strong>draft</strong>. Only an authorized administrator can approve and publish it.</p>
+    {% endif %}
+
+    <section class="editorial-box mb-20" id="ai-assistant-panel" data-endpoint="{{ url_for('admin.api_ai_assist') }}">
+      <div class="section-header">
+        <div>
+          <h2>✦ AI Content Assistant</h2>
+          <p class="muted">Rule-based suggestions for descriptions, summaries, learning outcomes, skills, search tags, and a category suggestion. No external AI service is connected; verify and edit suggestions before saving.</p>
+        </div>
+      </div>
+      <div class="field">
+        <label for="ai-raw-notes">Optional raw syllabus, topics, or rough notes to feed the assistant</label>
+        <textarea id="ai-raw-notes" rows="2" placeholder="Paste syllabus topics, lecture bullets, or rough notes here (or leave blank to generate from the Title, Category, Provider, and Difficulty below)..."></textarea>
+      </div>
+      <div class="review-actions">
+        <button type="button" class="btn btn-small btn-secondary" id="ai-generate-btn" data-mode="all">✦ Generate Descriptions, Skills &amp; Tags</button>
+        <button type="button" class="btn btn-small btn-ghost" id="ai-improve-btn" data-mode="improve">✦ Improve Existing Text &amp; Tags</button>
+        <span id="ai-status-msg" class="field-hint" role="status"></span>
+      </div>
+      <div id="ai-preview-box" class="panel pad-16 mt-12" hidden>
+        <p><strong>AI Draft Suggestions (Review before applying):</strong></p>
+        <p class="field-hint"><strong>Short description:</strong> <span id="ai-prev-short"></span></p>
+        <p class="field-hint"><strong>Full description:</strong></p>
+        <pre id="ai-prev-desc" class="pre-wrap field-hint"></pre>
+        <p class="field-hint mt-12"><strong>Suggested skills:</strong> <span id="ai-prev-skills"></span></p>
+        <p class="field-hint"><strong>Suggested learning outcomes:</strong> <span id="ai-prev-outcomes"></span></p>
+        <p class="field-hint"><strong>Suggested tags/keywords:</strong> <span id="ai-prev-keywords"></span></p>
+        <p class="field-hint"><strong>Suggested category:</strong> <span id="ai-prev-category"></span></p>
+        <div class="review-actions mt-12">
+          <button type="button" class="btn btn-small" id="ai-apply-all-btn">Apply all to editor fields</button>
+          <button type="button" class="btn btn-small btn-ghost" id="ai-apply-tags-btn">Apply only skills &amp; tags</button>
+        </div>
+      </div>
+    </section>
+
+    {% if duplicates %}
+      <div class="flash flash-error">
+        Possible duplicates found:
+        <ul>{% for item in duplicates %}<li>{{ item.title }} ({{ item.status }})</li>{% endfor %}</ul>
+        <label><input type="checkbox" name="confirm_duplicate" value="1" form="course-form"> I checked, save anyway</label>
+      </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" id="course-form">
+      {{ form.hidden_tag() }}
+
+      <fieldset class="fieldset-group">
+        <legend>1. Titles, Providers, URLs &amp; Categories</legend>
+        <div class="field">{{ form.title.label }} {{ form.title }} {% for e in form.title.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        <div class="form-grid-2">
+          <div class="field">{{ form.official_url.label }} {{ form.official_url }} {% for e in form.official_url.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+          <div class="field">{{ form.slug.label }} {{ form.slug }} {% for e in form.slug.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        </div>
+        <div class="form-grid-2">
+          <div class="field">{{ form.category_id.label }} {{ form.category_id }} {% for e in form.category_id.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+          <div class="field">{{ form.subcategory.label }} {{ form.subcategory }} {% for e in form.subcategory.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        </div>
+        <div class="form-grid-2">
+          <div class="field">{{ form.provider_id.label }} {{ form.provider_id }} {% for e in form.provider_id.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+          <div class="field">{{ form.language.label }} {{ form.language }} {% for e in form.language.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        </div>
+        <div class="form-grid-2">
+          <div class="field">{{ form.new_provider_name.label }} {{ form.new_provider_name }} {% for e in form.new_provider_name.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+          <div class="field">{{ form.new_provider_url.label }} {{ form.new_provider_url }} {% for e in form.new_provider_url.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        </div>
+        <div class="field">{{ form.short_description.label }} {{ form.short_description(rows=2) }} {% for e in form.short_description.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        <div class="field">{{ form.description.label }} {{ form.description(rows=5) }} {% for e in form.description.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+      </fieldset>
+
+      <fieldset class="fieldset-group">
+        <legend>2. Pricing, Difficulty, Duration &amp; Thumbnail</legend>
+        <div class="form-grid-2">
+          <div class="field">{{ form.is_free.label }} {{ form.is_free }} {% for e in form.is_free.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+          <div class="field">{{ form.difficulty.label }} {{ form.difficulty }} {% for e in form.difficulty.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        </div>
+        <div class="form-grid-2">
+          <div class="field">{{ form.price.label }} {{ form.price }} {% for e in form.price.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+          <div class="field">{{ form.currency.label }} {{ form.currency }} {% for e in form.currency.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        </div>
+        <div class="field">{{ form.pricing_notes.label }} {{ form.pricing_notes(rows=2) }} {% for e in form.pricing_notes.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        <div class="form-grid-2">
+          <div class="field">{{ form.duration.label }} {{ form.duration }} {% for e in form.duration.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+          <div class="field">{{ form.certificate_available.label }} {{ form.certificate_available }} {% for e in form.certificate_available.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        </div>
+        <div class="form-grid-2">
+          <div class="field-check">{{ form.duration_verified() }} {{ form.duration_verified.label }}</div>
+          <div class="field-check">{{ form.certificate_verified() }} {{ form.certificate_verified.label }}</div>
+        </div>
+        <div class="field">{{ form.teaching_format.label }} {{ form.teaching_format }} {% for e in form.teaching_format.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        <div class="field">
+          {{ form.thumbnail.label }} {{ form.thumbnail }}
+          {% for e in form.thumbnail.errors %}<div class="error">{{ e }}</div>{% endfor %}
+          {% if course and course.thumbnail_path %}
+            <div class="mt-12">
+              <p class="field-hint">Current thumbnail: <code>{{ course.thumbnail_path }}</code></p>
+              <label class="filter-check"><input type="checkbox" name="remove_thumbnail" value="1"> Remove current thumbnail</label>
+            </div>
+          {% endif %}
+        </div>
+      </fieldset>
+
+      <fieldset class="fieldset-group">
+        <legend>3. Skills Taught, Prerequisites &amp; Search Tags</legend>
+        <div class="field">{{ form.skills_taught.label }} {{ form.skills_taught(rows=4) }} {% for e in form.skills_taught.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        <div class="field">{{ form.learning_outcomes.label }} {{ form.learning_outcomes(rows=4) }} <p class="field-hint">Editable learning goals. Verify these against the official syllabus before publishing.</p>{% for e in form.learning_outcomes.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        <div class="field">{{ form.prerequisites.label }} {{ form.prerequisites(rows=2) }} {% for e in form.prerequisites.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        <div class="field">{{ form.intended_audience.label }} {{ form.intended_audience(rows=2) }} {% for e in form.intended_audience.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        <div class="field">{{ form.keywords.label }} {{ form.keywords(placeholder="e.g. Python, algorithms, data science") }} <p class="field-hint">Add comma-separated tags and search terms for this course.</p>{% for e in form.keywords.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+      </fieldset>
+
+      <fieldset class="fieldset-group">
+        <legend>4. Personal Recommendations &amp; Editorial Assessment</legend>
+        <div class="form-grid-2">
+          <div class="field">{{ form.recommendation_status.label }} {{ form.recommendation_status }} {% for e in form.recommendation_status.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+          <div class="field">{{ form.editorial_score.label }} {{ form.editorial_score }} {% for e in form.editorial_score.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        </div>
+        <div class="form-grid-2">
+          <div class="field-check">{{ form.editorial_approved() }} {{ form.editorial_approved.label }}</div>
+          <div class="field-check">{{ form.editorial_score_public() }} {{ form.editorial_score_public.label }}</div>
+        </div>
+        <div class="field">{{ form.editorial_assessment.label }} {{ form.editorial_assessment(rows=3) }} {% for e in form.editorial_assessment.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        <div class="field">{{ form.editorial_why_recommend.label }} {{ form.editorial_why_recommend(rows=2) }} {% for e in form.editorial_why_recommend.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        <div class="form-grid-2">
+          <div class="field">{{ form.strengths.label }} {{ form.strengths(rows=3) }} {% for e in form.strengths.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+          <div class="field">{{ form.limitations.label }} {{ form.limitations(rows=3) }} {% for e in form.limitations.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        </div>
+        <div class="form-grid-2">
+          <div class="field">{{ form.editorial_who_should_take.label }} {{ form.editorial_who_should_take(rows=2) }} {% for e in form.editorial_who_should_take.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+          <div class="field">{{ form.editorial_who_should_avoid.label }} {{ form.editorial_who_should_avoid(rows=2) }} {% for e in form.editorial_who_should_avoid.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        </div>
+        <div class="field">{{ form.editorial_value_for_money.label }} {{ form.editorial_value_for_money(rows=2) }} {% for e in form.editorial_value_for_money.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+      </fieldset>
+
+      <fieldset class="fieldset-group">
+        <legend>5. Verification, Curation Labels &amp; Private Notes</legend>
+        <div class="form-grid-2">
+          <div class="field">{{ form.last_verified_at.label }} {{ form.last_verified_at(placeholder="YYYY-MM-DD") }} {% for e in form.last_verified_at.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+          <div class="field">{{ form.source_checked_at.label }} {{ form.source_checked_at(placeholder="YYYY-MM-DD") }} {% for e in form.source_checked_at.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        </div>
+        <div class="field">{{ form.source_url.label }} {{ form.source_url }} {% for e in form.source_url.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+        <div class="field-check">{{ form.is_featured() }} {{ form.is_featured.label }}</div>
+        <div class="field-check">{{ form.is_underrated() }} {{ form.is_underrated.label }}</div>
+        <div class="field-check">{{ form.needs_verification() }} {{ form.needs_verification.label }}</div>
+        <div class="field mt-12">{{ form.admin_notes.label }} {{ form.admin_notes(rows=3) }} {% for e in form.admin_notes.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+      </fieldset>
+
+      <p class="field-hint">Only mark details as verified after checking the official course page. Featured and underrated badges appear publicly once the course is published.</p>
+      <button class="btn" type="submit">{{ "Save changes" if course else "Save as draft" }}</button>
+    </form>
+
+    {% if course and history %}
+      <h2 class="mt-28">Course audit history</h2>
+      <ul>
+        {% for a in history %}
+          <li>{{ a.created_at[:16]|replace("T", " ") }} · {{ a.actor_name or "system" }} · {{ a.action|replace("_", " ") }}{% if a.to_status %}: {{ a.from_status or "" }} → {{ a.to_status }}{% endif %}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

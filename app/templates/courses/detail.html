@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block title %}{{ course.title }} — CourseFinder{% endblock %}
+{% block content %}
+<section class="container section">
+  {% if preview %}
+    <div class="notice flex-wrap-gap">
+      <span><strong>Administrator preview:</strong> This course is currently <strong>{{ course.status|replace("_", " ") }}</strong> and is not public unless its status is Published.</span>
+      <a class="btn btn-small btn-secondary" href="{{ url_for('admin.course_edit', course_id=course.id) }}">Back to editor</a>
+    </div>
+  {% elif current_user and current_user.role == 'admin' %}
+    <div class="notice flex-wrap-gap">
+      <span>Administrator view: status is <strong>{{ course.status }}</strong>.</span>
+      <a class="btn btn-small btn-ghost" href="{{ url_for('admin.course_edit', course_id=course.id) }}">Edit in Admin</a>
+    </div>
+  {% endif %}
+
+  <p class="breadcrumb">
+    <a href="{{ url_for('public.courses') }}">Courses</a>
+    {% if course.category_slug %}
+      · <a href="{{ url_for('public.category_detail', slug=course.category_slug) }}">{{ course.category_name }}</a>
+    {% endif %}
+    {% if course.subcategory %} · {{ course.subcategory }}{% endif %}
+  </p>
+
+  <div class="detail-hero">
+    <div>
+      <div class="badge-row">
+        <span class="pill">{{ course.category_name or "Uncategorised" }}</span>
+        {% if course.is_free == True %}
+          <span class="pill pill-free">Free</span>
+        {% elif course.is_free == False %}
+          <span class="pill pill-paid">Paid{% if course.price is not none %} · {{ course.currency or "USD" }} {{ "%.2f"|format(course.price) }}{% endif %}</span>
+        {% else %}
+          <span class="pill">Price unknown</span>
+        {% endif %}
+        {% if course.is_featured %}
+          <span class="pill pill-featured">Featured</span>
+        {% endif %}
+        {% if course.is_underrated %}
+          <span class="pill pill-underrated">Underrated Gem</span>
+        {% endif %}
+        {% if course.difficulty %}
+          <span class="pill">{{ course.difficulty|replace("_", " ")|title }}</span>
+        {% endif %}
+      </div>
+
+      <h1>{{ course.title }}</h1>
+      <p class="provider">
+        Provider:
+        {% if course.provider_url %}
+          <a href="{{ course.provider_url }}" rel="noopener noreferrer" target="_blank">{{ course.provider_name or "Provider unknown" }}</a>
+        {% else %}
+          {{ course.provider_name or "Provider unknown" }}
+        {% endif %}
+      </p>
+      <p class="notice">CourseFinder recommends this external course. It does not provide the teaching, enrolment, or certificate.</p>
+      <p class="pre-wrap">{{ course.description }}</p>
+
+      <div class="detail-actions">
+        <a class="btn" href="{{ course.official_url }}" rel="noopener noreferrer" target="_blank">Go to official course ↗</a>
+        {% if current_user and not preview %}
+          {% if saved %}
+            <form method="post" action="{{ url_for('account.unsave', course_id=course.id) }}" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-ghost" type="submit">Remove from library</button>
+            </form>
+          {% else %}
+            <form method="post" action="{{ url_for('account.save', course_id=course.id) }}" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-ghost" type="submit">Save course</button>
+            </form>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+
+    <aside class="panel pad-20" aria-label="Course facts">
+      <ul class="fact-list">
+        <li>
+          <strong>Pricing:</strong>
+          {% if course.is_free == True %}Free
+          {% elif course.is_free == False %}Paid{% if course.price is not none %} · {{ course.currency or "USD" }} {{ "%.2f"|format(course.price) }}{% endif %}
+          {% else %}<span class="unknown">Unknown</span>{% endif %}
+          {% if course.pricing_notes %}<div class="field-hint">{{ course.pricing_notes }}</div>{% endif %}
+        </li>
+        <li><strong>Difficulty:</strong> {{ (course.difficulty|replace("_", " ")|title) if course.difficulty else "Unknown" }}</li>
+        <li>
+          <strong>Duration:</strong> {{ course.duration or "Unknown" }}
+          {% if course.duration %}
+            {% if course.duration_verified %}
+              <span class="pill pill-verified">Verified</span>
+            {% else %}
+              <span class="unknown">(not independently verified)</span>
+            {% endif %}
+          {% endif %}
+        </li>
+        <li>
+          <strong>Certificate:</strong>
+          {% if course.certificate_available == True %}Listed as available
+          {% elif course.certificate_available == False %}Not listed as available
+          {% else %}<span class="unknown">Unknown</span>{% endif %}
+          {% if course.certificate_verified %}
+            <span class="pill pill-verified">Verified</span>
+          {% else %}
+            <span class="unknown">(not independently verified)</span>
+          {% endif %}
+        </li>
+        <li><strong>Format:</strong> {{ course.teaching_format or "Unknown" }}</li>
+        {% if course.language %}
+          <li><strong>Language:</strong> {{ course.language }}</li>
+        {% endif %}
+        <li><strong>Last verified:</strong> {{ course.last_verified_at or "Not verified" }}</li>
+        <li><strong>Recommendation:</strong> {{ (course.recommendation_status or "none")|replace("_", " ")|title }}</li>
+        {% if course.editorial_approved and course.editorial_score_public and course.editorial_score is not none %}
+          <li><strong>CourseFinder editorial score:</strong> {{ course.editorial_score }}/10</li>
+        {% endif %}
+        <li>
+          <strong>User rating:</strong>
+          {% if course.user_rating is not none %}
+            ★ {{ course.user_rating }}/5 from {{ course.review_count }} approved reviews
+          {% else %}
+            <span class="unknown">{{ course.user_rating_hidden_reason or "No public user rating yet." }}</span>
+          {% endif %}
+        </li>
+      </ul>
+
+      {% if current_user and report_form and not preview %}
+        <details class="disclosure">
+          <summary>Report an issue with this listing</summary>
+          <form method="post" action="{{ url_for('public.report_course', slug=course.slug) }}" class="mt-12">
+            {{ report_form.hidden_tag() }}
+            <div class="field">{{ report_form.reason.label }} {{ report_form.reason }}</div>
+            <div class="field">{{ report_form.details.label }} {{ report_form.details(rows=2) }}</div>
+            <button class="btn btn-small btn-ghost" type="submit">Submit report</button>
+          </form>
+        </details>
+      {% endif %}
+    </aside>
+  </div>
+
+  <div class="split mt-28">
+    <div class="panel pad-20">
+      <h2>Course details</h2>
+      <p><strong>Prerequisites:</strong> {{ course.prerequisites or "Unknown" }}</p>
+      <p><strong>Skills taught:</strong></p>
+      {% if skills_list %}
+        <ul class="skill-list">
+          {% for skill in skills_list %}
+            <li class="skill-tag">{{ skill }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="unknown">Unknown</p>
+      {% endif %}
+      {% if course.learning_outcomes %}
+        <p><strong>Learning outcomes:</strong></p>
+        <ul class="outcome-list">
+          {% for outcome in course.learning_outcomes.split('\n') if outcome.strip() %}
+            <li>{{ outcome }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      <p><strong>Intended audience:</strong> {{ course.intended_audience or "Unknown" }}</p>
+
+      {% if course.editorial_approved %}
+        <div class="editorial-box">
+          <h2>Editorial assessment</h2>
+          <p class="muted">These notes are CourseFinder editorial assessments, separate from user reviews.</p>
+          {% if course.editorial_assessment %}<p class="pre-wrap">{{ course.editorial_assessment }}</p>{% endif %}
+          {% if course.editorial_why_recommend %}<p><strong>Why we recommend it:</strong> {{ course.editorial_why_recommend }}</p>{% endif %}
+          {% if course.strengths %}<p><strong>Strengths:</strong> {{ course.strengths }}</p>{% endif %}
+          {% if course.limitations %}<p><strong>Limitations:</strong> {{ course.limitations }}</p>{% endif %}
+          {% if course.editorial_who_should_take %}<p><strong>Who should take it:</strong> {{ course.editorial_who_should_take }}</p>{% endif %}
+          {% if course.editorial_who_should_avoid %}<p><strong>Who should avoid it:</strong> {{ course.editorial_who_should_avoid }}</p>{% endif %}
+          {% if course.editorial_value_for_money %}<p><strong>Value for money:</strong> {{ course.editorial_value_for_money }}</p>{% endif %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="panel pad-20" id="reviews">
+      <h2>User reviews</h2>
+      {% if reviews %}
+        {% for review in reviews %}
+          <article class="review-item">
+            <div class="review-header">
+              <strong>{{ review.display_name }}</strong>
+              <span class="score-pill">★ {{ review.rating }}/5</span>
+            </div>
+            <p class="pre-wrap mt-12">{{ review.body }}</p>
+            {% if current_user and review_report_form and not preview and review.user_id != current_user.id %}
+              <details class="disclosure">
+                <summary>Report review</summary>
+                <form method="post" action="{{ url_for('public.report_review', review_id=review.id) }}" class="mt-12">
+                  {{ review_report_form.hidden_tag() }}
+                  <div class="field">{{ review_report_form.reason.label }} {{ review_report_form.reason }}</div>
+                  <div class="field">{{ review_report_form.details.label }} {{ review_report_form.details(rows=2) }}</div>
+                  <button class="btn btn-small btn-ghost" type="submit">Report review</button>
+                </form>
+              </details>
+            {% endif %}
+          </article>
+        {% endfor %}
+      {% else %}
+        <p class="unknown">No approved user reviews yet. CourseFinder does not invent reviews.</p>
+      {% endif %}
+
+      {% if my_review and not preview %}
+        <div class="notice mt-16">
+          <p><strong>Your review status:</strong> {{ my_review.status|title }} ({{ my_review.rating }}/5)</p>
+          <p class="field-hint">Submitting the form below updates your review and sends it for moderation.</p>
+          <form method="post" action="{{ url_for('public.delete_my_review', slug=course.slug) }}" data-confirm="Delete your review for this course?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-small btn-danger" type="submit">Delete my review</button>
+          </form>
+        </div>
+      {% endif %}
+
+      {% if form and current_user and not preview %}
+        <div id="write-review" class="mt-16">
+          <h3>{{ "Update your review" if my_review else "Write a review" }}</h3>
+          <p class="muted">Reviews require at least 20 characters and stay hidden until an administrator approves them.</p>
+          <form method="post" action="{{ url_for('public.submit_review', slug=course.slug) }}">
+            {{ form.hidden_tag() }}
+            <div class="field">
+              {{ form.rating.label }}
+              <div class="radio-group">
+                {% for subfield in form.rating %}
+                  <label>{{ subfield }} {{ subfield.label.text }}</label>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="field">
+              {{ form.body.label }}
+              {{ form.body(rows=4, placeholder="Share what you learned, how demanding the material was, and who this course suits...") }}
+            </div>
+            <button class="btn" type="submit">{{ "Update review" if my_review else "Submit review" }}</button>
+          </form>
+        </div>
+      {% elif not current_user and not preview %}
+        <p class="mt-16"><a href="{{ url_for('auth.login', next=request.path) }}">Sign in</a> to save this course or write a review.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if similar %}
+    <div class="mt-28">
+      <h2>Similar courses in {{ course.category_name }}</h2>
+      <div class="card-grid">
+        {% for course in similar %}
+          {% include "partials/course_card.html" %}
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

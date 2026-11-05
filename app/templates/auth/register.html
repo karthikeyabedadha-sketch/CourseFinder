@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Sign up — CourseFinder{% endblock %}
+{% block content %}
+<section class="container section">
+  <div class="form-card">
+    <h1>Create an account</h1>
+    <p class="muted">Registration always creates a standard user account. Administrator access is granted only through a server-side setup script.</p>
+    <form method="post">
+      {{ form.hidden_tag() }}
+      <div class="field">{{ form.display_name.label }} {{ form.display_name }} {% for e in form.display_name.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+      <div class="field">{{ form.email.label }} {{ form.email }} {% for e in form.email.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+      <div class="field">{{ form.password.label }} {{ form.password }} {% for e in form.password.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+      <button class="btn" type="submit">Sign up</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

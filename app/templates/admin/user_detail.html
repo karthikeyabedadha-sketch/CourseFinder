@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ user.display_name or user.email }} — Owner Studio{% endblock %}
+{% block content %}
+<div class="container admin-shell">
+  {% include "admin/_nav.html" %}
+  <div>
+    <p><a href="{{ url_for('admin.users') }}">← User management</a></p>
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">Owner Studio · Account details</p>
+        <h1>{{ user.display_name or "CourseFinder user" }}</h1>
+        <p class="muted">{{ user.email }}</p>
+      </div>
+    </div>
+
+    <section class="grid-3 mb-20" aria-label="Account details">
+      <article class="panel pad-16">
+        <p class="muted">Access role</p>
+        <strong>{{ user.role|title }}</strong>
+      </article>
+      <article class="panel pad-16">
+        <p class="muted">Account status</p>
+        <strong>{{ "Active" if user.is_active else "Suspended" }}</strong>
+      </article>
+      <article class="panel pad-16">
+        <p class="muted">Registered</p>
+        <strong>{{ user.created_at[:10] if user.created_at else "Unknown" }}</strong>
+      </article>
+    </section>
+
+    <section class="panel pad-16 mb-20">
+      <h2>Recent reviews ({{ reviews|length }})</h2>
+      {% for review in reviews %}
+        <article class="review-card">
+          <p>
+            <strong>{{ review.course_title or "Course" }}</strong>
+            · {{ review.rating }}/5 · <span class="pill">{{ review.status|title }}</span>
+          </p>
+          <p class="pre-wrap">{{ review.body }}</p>
+          <div class="review-actions">
+            <form method="post" action="{{ url_for('admin.review_status', review_id=review.id) }}" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-small" name="status" value="approved">Approve</button>
+              <button class="btn btn-small btn-ghost" name="status" value="rejected">Reject</button>
+            </form>
+            <form method="post" action="{{ url_for('admin.review_delete', review_id=review.id) }}" class="inline-form"
+                  data-confirm="Delete this review permanently?">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-small btn-danger" type="submit">Delete</button>
+            </form>
+          </div>
+        </article>
+      {% else %}
+        <p class="muted">This account has not submitted any reviews.</p>
+      {% endfor %}
+    </section>
+
+    <section class="panel pad-16">
+      <h2>Account activity</h2>
+      {% for action in activity %}
+        <article class="activity-row">
+          <div>
+            <strong>{{ action.action|replace("_", " ")|title }}</strong>
+            <p class="field-hint">
+              {{ action.to_status or action.note or "" }}
+              {% if action.created_at %} · {{ action.created_at[:19]|replace("T", " ") }}{% endif %}
+            </p>
+          </div>
+        </article>
+      {% else %}
+        <p class="muted">No account-specific administrative activity yet.</p>
+      {% endfor %}
+    </section>
+  </div>
+</div>
+{% endblock %}

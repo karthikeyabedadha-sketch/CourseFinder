@@ -46,3 +46,17 @@ Last updated: 2026-11-02. Every item marked `[x]` has been implemented and verif
 
 ## Phase 6 — Quality Assurance
 - [x] 51 automated tests passing across public pages, authentication/admin authorization, comprehensive workflows, Owner Studio, and Supabase-store metric behavior
+
+
+## Phase 7 - Supabase Repair (2026-11-10)
+- [x] Created a separate SQLite pre-migration backup; SHA-256 matches the source and the backup passes `PRAGMA integrity_check`.
+- [x] Migrated seven original courses, preserving course IDs, slugs, content, metadata, timestamps, and statuses (5 published, 1 approved, 1 draft).
+- [x] Mapped categories by slug and providers by slug; preserved original provider IDs because no matching provider rows existed in Supabase.
+- [x] Migrated seven course-admin-note rows and 31 moderation-history rows; no reviews, saved courses, submissions, reports, or contact messages existed locally.
+- [x] Verified reruns do not create duplicates and all five originally published courses are the only public courses.
+- [x] Added Supabase email-confirmation resend, password-reset request/recovery, safer registration sessions, and sanitized auth error handling.
+- [x] Configured `OWNER_ACCESS_SECRET` in ignored `.env`; verified Owner Studio unlock, access, logout, and session revocation against isolated SQLite.
+- [x] Added `.env.example` and updated authentication/deployment setup documentation.
+- [x] Final automated suite: 63 tests passed; Supabase public route smoke checks passed.
+- [ ] Supabase account confirmation still requires the account owner to open the emailed link; no verification was fabricated.
+- [ ] Production hosting provider and public domain are not configured in this repository; deployment remains pending.

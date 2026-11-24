@@ -4,9 +4,11 @@ Enforces the exact same editorial workflow, untrusted origin guards, and
 filter sanitization as LocalStore.
 """
 
+import logging
 import re
 from datetime import datetime, timedelta, timezone
 
+import httpx
 from supabase import create_client
 
 from app import workflow
@@ -18,11 +20,12 @@ from app.store.constants import (
     SUBMISSION_STATUSES,
     UNTRUSTED_ORIGINS,
 )
-from app.store.errors import DuplicateError, NotFoundError, StoreError
+from app.store.errors import DuplicateError, EmailNotConfirmedError, NotFoundError, StoreError
 from app.store.local import TOGGLEABLE_FLAGS
 from app.utils import new_id, normalise_url, search_terms, slugify
 
 SAFE_FILTER_RE = re.compile(r"[^a-zA-Z0-9\s\-_]")
+logger = logging.getLogger(__name__)
 
 
 def _now():
@@ -41,10 +44,11 @@ class SupabaseStore:
         self.url = config["SUPABASE_URL"]
         self.anon_key = config["SUPABASE_ANON_KEY"]
         self.service_key = config["SUPABASE_SERVICE_ROLE_KEY"]
+        self.public_base_url = (config.get("PUBLIC_BASE_URL") or "").rstrip("/")
         self.seed_sample = config.get("SEED_SAMPLE_COURSES", False)
         self.min_rating_count = int(min_rating_count)
         self.admin = create_client(self.url, self.service_key)
-        self.auth_client = create_client(self.url, self.anon_key or self.service_key)
+        self.auth_client = create_client(self.url, self.anon_key)
 
     def ping(self):
         self._table("categories").select("id").limit(1).execute()
@@ -71,7 +75,19 @@ class SupabaseStore:
         self._table("owner_sessions").delete().eq("token_hash", token_hash).execute()
 
     def initialize(self):
-        self.ensure_categories()
+        try:
+            self.ensure_categories()
+        except httpx.ConnectError as exc:
+            message = str(exc).lower()
+            if "getaddrinfo failed" in message or "name or service not known" in message:
+                reason = "DNS could not resolve the configured Supabase host"
+            else:
+                reason = "a network connection to the configured Supabase host failed"
+            logger.error("Supabase startup check failed: %s", reason)
+            raise RuntimeError(
+                f"CourseFinder cannot start because {reason}. Check SUPABASE_URL, "
+                "the Supabase project status, and network access."
+            ) from None
 
     def _table(self, name):
         return self.admin.table(name)
@@ -102,10 +118,27 @@ class SupabaseStore:
         email = email.strip().lower()
         if self.get_user_by_email(email):
             raise DuplicateError("An account with this email already exists.")
-        result = self.auth_client.auth.sign_up({"email": email, "password": password})
+        options = {"email_redirect_to": self.public_base_url} if self.public_base_url else {}
+        try:
+            result = self.auth_client.auth.sign_up(
+                {"email": email, "password": password, "options": options}
+            )
+        except Exception as exc:
+            code = getattr(exc, "code", "")
+            code = str(getattr(code, "value", code))
+            if code in {"user_already_exists", "email_exists"}:
+                raise DuplicateError(
+                    "An account may already exist for this address. Sign in or request a confirmation email."
+                ) from None
+            logger.warning(
+                "Supabase registration failed (status=%s, code=%s)",
+                getattr(exc, "status", "unknown"),
+                code[:80] or type(exc).__name__,
+            )
+            raise StoreError("Account creation could not be completed. Please try again.") from None
         user = result.user
         if not user:
-            raise ValueError("Registration failed. If email confirmation is enabled, check your inbox.")
+            raise StoreError("Account creation could not be completed. Please try again.")
         profile = {
             "id": str(user.id),
             "email": email,
@@ -113,7 +146,11 @@ class SupabaseStore:
             "role": "user",
             "is_active": True,
         }
-        self._table("profiles").upsert(profile).execute()
+        try:
+            self._table("profiles").upsert(profile).execute()
+        except Exception as exc:
+            logger.warning("Supabase profile creation failed after Auth signup (%s)", type(exc).__name__)
+            raise StoreError("Account setup could not be completed. Please try signing in or contact support.") from None
         return self.get_user(str(user.id))
 
     def authenticate(self, email, password):
@@ -121,24 +158,69 @@ class SupabaseStore:
             result = self.auth_client.auth.sign_in_with_password(
                 {"email": email.strip().lower(), "password": password}
             )
-        except Exception:
+        except Exception as exc:
+            code = getattr(exc, "code", "")
+            error_code = str(getattr(code, "value", code))
+            if error_code == "email_not_confirmed":
+                raise EmailNotConfirmedError from None
+            logger.warning(
+                "Supabase sign-in rejected (status=%s, code=%s)",
+                getattr(exc, "status", "unknown"),
+                error_code[:80] or type(exc).__name__,
+            )
             return None
         if not result.user:
             return None
         user_id = str(result.user.id)
-        profile = self.get_user(user_id)
-        if not profile:
-            self._table("profiles").insert(
-                {
-                    "id": user_id,
-                    "email": email.strip().lower(),
-                    "display_name": email.split("@")[0],
-                    "role": "user",
-                    "is_active": True,
-                }
-            ).execute()
+        try:
             profile = self.get_user(user_id)
+            if not profile:
+                self._table("profiles").insert(
+                    {
+                        "id": user_id,
+                        "email": email.strip().lower(),
+                        "display_name": email.split("@")[0],
+                        "role": "user",
+                        "is_active": True,
+                    }
+                ).execute()
+                profile = self.get_user(user_id)
+        except Exception as exc:
+            logger.warning("Supabase profile lookup failed after Auth sign-in (%s)", type(exc).__name__)
+            raise StoreError("Sign-in is temporarily unavailable. Please try again.") from None
         return profile if profile and profile.get("is_active", True) else None
+
+    def resend_confirmation(self, email, redirect_to=None):
+        options = {"email_redirect_to": redirect_to or self.public_base_url}
+        self.auth_client.auth.resend(
+            {"type": "signup", "email": email.strip().lower(), "options": options}
+        )
+
+    def request_password_reset(self, email, redirect_to):
+        self.auth_client.auth.reset_password_for_email(
+            email.strip().lower(), options={"redirect_to": redirect_to}
+        )
+
+    def update_password_from_recovery(self, access_token, password):
+        if not access_token or len(access_token) > 8192:
+            return False
+        try:
+            response = httpx.put(
+                f"{self.url}/auth/v1/user",
+                headers={
+                    "apikey": self.anon_key,
+                    "Authorization": f"Bearer {access_token}",
+                },
+                json={"password": password},
+                timeout=15,
+            )
+        except httpx.HTTPError as exc:
+            logger.warning("Supabase password recovery request failed (%s)", type(exc).__name__)
+            return False
+        if not response.is_success:
+            logger.warning("Supabase rejected password recovery (HTTP %s)", response.status_code)
+            return False
+        return True
 
     def get_user(self, user_id):
         result = self._table("profiles").select(

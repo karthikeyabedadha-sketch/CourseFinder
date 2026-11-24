@@ -3,6 +3,7 @@ from flask_wtf.file import FileAllowed, FileField
 from wtforms import (
     BooleanField,
     DecimalField,
+    HiddenField,
     IntegerField,
     PasswordField,
     RadioField,
@@ -25,6 +26,18 @@ class RegisterForm(FlaskForm):
 class LoginForm(FlaskForm):
     email = StringField("Email", validators=[DataRequired(), Email()])
     password = PasswordField("Password", validators=[DataRequired()])
+
+
+class EmailOnlyForm(FlaskForm):
+    email = StringField("Email", validators=[DataRequired(), Email(), Length(max=254)])
+
+
+class ResetPasswordForm(FlaskForm):
+    access_token = HiddenField(validators=[DataRequired(), Length(max=8192)])
+    password = PasswordField("New password", validators=[DataRequired(), Length(min=8, max=128)])
+    confirm_password = PasswordField(
+        "Confirm new password", validators=[DataRequired(), EqualTo("password", message="Passwords must match.")]
+    )
 
 
 class ContactForm(FlaskForm):

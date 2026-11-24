@@ -8,3 +8,7 @@ class DuplicateError(StoreError):
 
 class NotFoundError(StoreError):
     """The requested record does not exist or is not visible."""
+
+
+class EmailNotConfirmedError(StoreError):
+    """Supabase rejected sign-in because the account needs email confirmation."""

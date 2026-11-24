@@ -40,6 +40,19 @@
   });
 })();
 
+// Supabase recovery links return the short-lived access token in the URL fragment.
+(function () {
+  const form = document.getElementById("password-reset-form");
+  const tokenField = form && form.querySelector('input[name="access_token"]');
+  if (!form || !tokenField) return;
+
+  const fragment = new URLSearchParams(window.location.hash.slice(1));
+  if (fragment.get("type") === "recovery" && fragment.get("access_token")) {
+    tokenField.value = fragment.get("access_token");
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }
+})();
+
 // Owner Studio AI Content Assistant inside the Course Editor.
 (function () {
   const panel = document.getElementById("ai-assistant-panel");

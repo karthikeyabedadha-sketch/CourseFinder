@@ -9,9 +9,13 @@ def create_store(app):
     if backend == "supabase":
         from app.store.supabase_store import SupabaseStore
 
-        if not app.config.get("SUPABASE_URL") or not app.config.get("SUPABASE_SERVICE_ROLE_KEY"):
+        if not all(
+            app.config.get(key)
+            for key in ("SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY")
+        ):
             raise RuntimeError(
-                "DATA_BACKEND=supabase requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env"
+                "DATA_BACKEND=supabase requires SUPABASE_URL, SUPABASE_ANON_KEY, "
+                "and SUPABASE_SERVICE_ROLE_KEY in the server environment"
             )
         return SupabaseStore(app.config, min_rating_count=min_rating_count)
 

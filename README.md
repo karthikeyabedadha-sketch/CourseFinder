@@ -40,7 +40,7 @@ Copy the example configuration file:
 copy .env.example .env
 ```
 
-Edit `.env` and set a strong random `SECRET_KEY`. Owner Studio reads `OWNER_ACCESS_SECRET` from the server environment; the recommended local setup below prompts for it without echoing the secret or saving it in `.env`.
+Edit `.env` and set separate strong random values for `SECRET_KEY`, `OWNER_ACCESS_SECRET`, and `ADMIN_SETUP_TOKEN`. Keep `.env` private; it is excluded from Git.
 
 ```powershell
 python -c "import secrets; print('SECRET_KEY=' + secrets.token_hex(32))"
@@ -76,7 +76,11 @@ Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
 
 ## 6. Owner Studio Access
 
-Owner Studio uses a password-only access screen at `/admin/studio`. Regular user registration and login remain separate and never grant administrative access. To enter the owner secret without echoing it, set it for the current PowerShell process and start the app in the same terminal:
+Owner Studio uses a password-only access screen at `/admin/studio`. Regular user registration and login remain separate and never grant administrative access. Set `OWNER_ACCESS_SECRET` in the local `.env` or deployment secret manager. It must be at least 16 characters. Do not commit it or put it in browser code.
+
+Supabase Auth may require email confirmation. Users can request another confirmation email from the sign-in page. Password reset uses Supabase's recovery email and returns to `/auth/reset-password`; add the deployed HTTPS reset URL to the Supabase Auth redirect allow list.
+
+For an interactive local session, you may also set the owner secret for the current PowerShell process without echoing it:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
@@ -90,9 +94,9 @@ try {
 python wsgi.py
 ```
 
-Use a unique secret of at least 16 characters, kept separate from your email and normal user passwords. The application stores only a hash of the temporary session token in SQLite; it does not persist the owner secret. The setting is inherited by the app process and is not stored in `.env`. Close this PowerShell window to clear it. An unlocked session expires after eight hours; the Owner Studio sidebar has a **Lock Owner Studio** button.
+Use a unique secret of at least 16 characters, kept separate from your email and normal user passwords. The application stores only a hash of the temporary session token in the selected data store; it never persists the owner secret. A value in `.env` is loaded when the app starts. A PowerShell process override takes precedence for that process. An unlocked session expires after eight hours; the Owner Studio sidebar has a **Lock Owner Studio** button.
 
-Visit [http://127.0.0.1:5000/admin/studio](http://127.0.0.1:5000/admin/studio) to unlock. The owner secret is not available in the current conversation context; enter the secret you intend to use at the hidden PowerShell prompt.
+Visit [http://127.0.0.1:5000/admin/studio](http://127.0.0.1:5000/admin/studio) to unlock. For local use, enter the value configured in your private `.env` file.
 
 ## 7. Running the Automated Test Suite
 
@@ -104,7 +108,7 @@ python -m pytest -v
 ## 8. Production Deployment
 
 1. Set `FLASK_ENV=production` in your production environment variables.
-2. Provide a strong `SECRET_KEY` (minimum 32 characters) and a private `OWNER_ACCESS_SECRET` (minimum 16 characters).
+2. Set `FLASK_ENV=production`, a strong `SECRET_KEY` (minimum 32 characters), a private `OWNER_ACCESS_SECRET` (minimum 16 characters), and the real `PUBLIC_BASE_URL`.
 3. If running behind a reverse proxy (e.g. Render, Nginx, Cloudflare), set `TRUSTED_PROXY_COUNT=1` so rate limiting and HTTPS redirects see the real client IP and scheme.
 4. Serve the application with Gunicorn on Linux/container hosts:
    ```bash
